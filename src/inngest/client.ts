@@ -10,6 +10,10 @@ type Events = {
   "mission/discover.requested": { data: { missionId: string; userId: string } };
   "match/score.requested": { data: { matchId: string; userId: string } };
   "match/tailor.requested": { data: { matchId: string; userId: string } };
+  // Emitted when an application is prepared and an approval card is created.
+  "application/ready": {
+    data: { applicationId: string; approvalId: string; userId: string };
+  };
   // Emitted by the UI when the user decides on an approval card.
   "application/approval.resolved": {
     data: {

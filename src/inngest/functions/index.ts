@@ -2,6 +2,7 @@ import type { InngestFunction } from "inngest";
 import { discover, scheduledDiscovery } from "./discover";
 import { parseMission } from "./parse-mission";
 import { score } from "./score";
+import { tailor } from "./tailor";
 
 /**
  * Registry of all Inngest functions, served at /api/inngest. Functions are
@@ -13,4 +14,5 @@ export const functions: InngestFunction.Any[] = [
   discover,
   scheduledDiscovery,
   score,
+  tailor,
 ];

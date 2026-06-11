@@ -10,7 +10,7 @@ Full plan: see the project plan / `README.md`.
 | 0 | Foundations | ✅ Complete |
 | 1 | Profile & Goal | ✅ Complete |
 | 2 | Discovery & Match | ✅ Complete |
-| 3 | Tailor & Package | ⏳ Planned |
+| 3 | Tailor & Package | ✅ Complete |
 | 4 | Review & Apply (first E2E demo) | ⏳ Planned |
 | 5 | Follow-up & Inbox | ⏳ Planned |
 | 6 | Interview Scheduling | ⏳ Planned |
@@ -122,3 +122,31 @@ dedupe them, and score each against the candidate — cheaply and in parallel.
 
 **Next:** Phase 3 — tailor the resume for high-scoring matches, draft a cover
 letter, and render a tailored PDF.
+
+---
+
+## Phase 3 — Tailor & Package ✅
+
+**Goal:** For every high-scoring match, produce a truthful, job-specific
+application package and queue it for human review.
+
+**Delivered:**
+
+- **PDF renderer** (`src/lib/resume/render.tsx`) — `@react-pdf/renderer`
+  one-column resume from a `CandidateProfile`; `renderResumePdf()` returns a
+  Buffer for upload.
+- **Tailor workflow** (`src/inngest/functions/tailor.ts`) — `match/tailor.requested`:
+  1. `tailorResume` (Claude Opus, truthful-by-construction) → tailored profile.
+  2. `draftCoverLetter` (Claude Opus, adaptive thinking) → cover letter.
+  3. Render tailored PDF → upload to the private `resumes` bucket → `resume_files`.
+  4. Create the `applications` row (`awaiting_approval`) + an `approvals` card
+     (`type: apply`, with job/score/cover-letter preview).
+  5. Mark the match `ready`, log activity, and emit `application/ready`
+     (Phase 4 consumes this to wait for the user's decision).
+- **Event** — added `application/ready` to the typed Inngest schema.
+
+**Verified:** `tsc --noEmit` clean; `next build` succeeds (react-pdf bundles
+server-side via `serverExternalPackages`).
+
+**Next:** Phase 4 — the Approval Inbox UI, the `waitForEvent` approval gate, and
+assisted submission. First true end-to-end demo.

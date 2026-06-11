@@ -14,13 +14,13 @@ export const awaitApproval = inngest.createFunction(
   { id: "await-approval", retries: 1 },
   { event: "application/ready" },
   async ({ event, step }) => {
-    const { applicationId, userId } = event.data;
+    const { applicationId, approvalId, userId } = event.data;
     const db = supabaseAdmin();
 
     const decision = await step.waitForEvent("wait-for-decision", {
       event: "application/approval.resolved",
       timeout: "30d",
-      if: `async.data.applicationId == "${applicationId}"`,
+      if: `async.data.approvalId == "${approvalId}"`,
     });
 
     if (!decision) {

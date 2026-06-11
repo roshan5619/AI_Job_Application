@@ -15,7 +15,9 @@ export async function POST(
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const { id } = await params;
-  const { decision } = await request.json().catch(() => ({ decision: "" }));
+  const { decision, selectedSlot } = await request
+    .json()
+    .catch(() => ({ decision: "", selectedSlot: undefined }));
   if (decision !== "approved" && decision !== "rejected") {
     return NextResponse.json({ error: "invalid decision" }, { status: 400 });
   }
@@ -56,6 +58,7 @@ export async function POST(
       approvalId: id,
       applicationId: approval.application_id as string,
       decision,
+      selectedSlot: typeof selectedSlot === "string" ? selectedSlot : undefined,
     },
   });
 

@@ -12,8 +12,8 @@ Full plan: see the project plan / `README.md`.
 | 2 | Discovery & Match | ✅ Complete |
 | 3 | Tailor & Package | ✅ Complete |
 | 4 | Review & Apply (first E2E demo) | ✅ Complete |
-| 5 | Follow-up & Inbox | ⏳ Planned |
-| 6 | Interview Scheduling | ⏳ Planned |
+| 5 | Follow-up & Inbox | ✅ Complete (code) |
+| 6 | Interview Scheduling | ✅ Complete (code) |
 | 7 | Launch Hardening | ⏳ Planned |
 
 ---
@@ -179,3 +179,57 @@ apply**. Verified: `tsc --noEmit` clean; `next build` succeeds.
 
 **Next:** Phase 5 — Gmail OAuth, scheduled follow-up emails (approval-gated),
 and inbound-reply triage.
+
+---
+
+## Phase 5 — Follow-up & Inbox ✅ (code-complete)
+
+**Goal:** After applying, the agent can follow up by email and understand
+recruiter replies — all through the user's own Gmail, approval-gated.
+
+**Delivered:**
+
+- **Google integration layer** (shared with Phase 6)
+  - `lib/google/oauth.ts` — consent URL + OAuth2 client (offline access, Gmail +
+    Calendar scopes).
+  - `lib/google/client.ts` — per-user authenticated client; auto-refreshes and
+    re-persists rotated tokens (encrypted).
+  - OAuth routes: `/api/integrations/google/start` + `/callback` (session-based
+    attribution; tokens saved encrypted).
+  - "Connect Gmail & Calendar" link in the inbox.
+- **Gmail** (`lib/google/gmail.ts`) — `sendGmail` (RFC-2822, base64url) and
+  `getLatestInbound` (MIME walk for the newest non-`SENT` message in a thread).
+- **Follow-up workflow** (`follow-up.ts`) — sleeps 5 days, skips if a reply
+  already arrived or the app isn't submitted, drafts a short follow-up (Claude),
+  creates a `follow_up` approval, waits for the decision, and on approval sends
+  via Gmail (when a recruiter address is known) + logs a `communications` row.
+- **Reply triage** (`poll-replies.ts`) — hourly cron scans tracked threads,
+  ingests new inbound messages, classifies them (`triageReply`), and on
+  `interview_request` emits `interview/schedule.requested`.
+
+---
+
+## Phase 6 — Interview Scheduling ✅ (code-complete)
+
+**Goal:** When a recruiter wants to talk, the agent proposes real open times and
+books the interview once the user confirms.
+
+**Delivered:**
+
+- **Calendar** (`lib/google/calendar.ts`) — `getBusy` (free/busy), `createEvent`
+  (with attendee invite), and `proposeSlots` (weekday business-hour slots that
+  avoid busy intervals).
+- **Interview workflow** (`interview.ts`) — `interview/schedule.requested` →
+  read calendar → propose 3 slots → create an `interview` row + an
+  `interview_proposal` approval → wait for the user to pick a slot → book the
+  event and reply to the recruiter in-thread with the confirmed time.
+- **Approval UI** — `ApprovalCard` now handles all three types (apply /
+  follow-up / interview), including a radio slot-picker for interviews; the
+  resolve API forwards the chosen `selectedSlot`.
+
+**Verified:** `tsc --noEmit` clean; `next build` succeeds (googleapis bundles
+server-side). Live Gmail/Calendar actions require a Google Cloud OAuth app
+(client id/secret + verified scopes) in the environment.
+
+**Next:** Phase 7 — launch hardening (Stripe billing, per-user quotas,
+observability, security review).

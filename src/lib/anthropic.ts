@@ -188,6 +188,32 @@ export async function draftCoverLetter(
 }
 
 // ---------------------------------------------------------------------------
+// Follow-up email draft (subject + body)
+// ---------------------------------------------------------------------------
+const FollowUpSchema = z.object({
+  subject: z.string(),
+  body: z.string().describe("Plain-text email body, under 120 words"),
+});
+export type FollowUp = z.infer<typeof FollowUpSchema>;
+
+export async function draftFollowUp(
+  candidateName: string,
+  jobTitle: string,
+  company: string,
+): Promise<FollowUp> {
+  return parseStructured({
+    model: MODEL.HAIKU,
+    schema: FollowUpSchema,
+    system:
+      "You write short, polite, non-pushy follow-up emails after a job " +
+      "application. Reaffirm interest and value in one or two sentences. No " +
+      "clichés. Sign off with the candidate's name.",
+    user: `Candidate: ${candidateName}\nApplied for: ${jobTitle} at ${company}`,
+    maxTokens: 800,
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Reply triage: classify an inbound recruiter email
 // ---------------------------------------------------------------------------
 export async function triageReply(

@@ -14,12 +14,23 @@ type Events = {
   "application/ready": {
     data: { applicationId: string; approvalId: string; userId: string };
   };
-  // Emitted by the UI when the user decides on an approval card.
+  // Emitted by the UI when the user decides on an approval card. selectedSlot
+  // is set only for interview_proposal approvals (the chosen ISO datetime).
   "application/approval.resolved": {
     data: {
       approvalId: string;
       applicationId: string;
       decision: "approved" | "rejected" | "edited";
+      selectedSlot?: string;
+    };
+  };
+  // Emitted by reply triage when a recruiter asks to schedule an interview.
+  "interview/schedule.requested": {
+    data: {
+      applicationId: string;
+      userId: string;
+      recruiterEmail: string | null;
+      threadId: string | null;
     };
   };
   // Scheduled after an approved application is submitted (Phase 5 follow-up).

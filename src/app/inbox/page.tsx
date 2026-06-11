@@ -1,19 +1,24 @@
 import { requireUser } from "@/lib/auth";
 import { supabaseServer } from "@/lib/supabase/server";
-import ApprovalCard from "./ApprovalCard";
+import ApprovalCard, { type ApprovalCardProps } from "./ApprovalCard";
 
-type ApprovalPayload = {
+type Payload = {
   jobTitle?: string;
   company?: string;
   location?: string | null;
   applyUrl?: string;
   score?: number | null;
+  subject?: string;
+  body?: string;
+  recipient?: string | null;
+  recruiterEmail?: string | null;
+  slots?: string[];
 };
 
 /**
- * Approval Inbox — the primary surface. Shows pending "apply" cards with the
- * job, score, cover letter, and tailored resume; the user approves or skips.
- * Below the inbox, a read-only activity feed of what the agent has done.
+ * Approval Inbox — the primary surface. Renders every pending approval
+ * (apply / follow-up / interview) as a card the user acts on, plus the
+ * activity feed.
  */
 export default async function InboxPage() {
   await requireUser();
@@ -21,21 +26,43 @@ export default async function InboxPage() {
 
   const { data: approvals } = await supabase
     .from("approvals")
-    .select("id, payload, application_id, created_at")
+    .select("id, type, payload, application_id, created_at")
     .is("decision", null)
-    .eq("type", "apply")
     .order("created_at", { ascending: false });
 
-  // Enrich each card with the full cover letter and a signed resume URL.
-  const cards = await Promise.all(
-    (approvals ?? []).map(async (a) => {
-      const payload = (a.payload ?? {}) as ApprovalPayload;
+  const cards: ApprovalCardProps[] = await Promise.all(
+    (approvals ?? []).map(async (a): Promise<ApprovalCardProps> => {
+      const p = (a.payload ?? {}) as Payload;
+      const base = {
+        id: a.id,
+        title: p.jobTitle ?? "Role",
+        subtitle: [p.company, p.location].filter(Boolean).join(" · "),
+      };
+
+      if (a.type === "follow_up") {
+        return {
+          ...base,
+          type: "follow_up",
+          emailSubject: p.subject ?? "",
+          emailBody: p.body ?? "",
+          recipient: p.recipient ?? null,
+        };
+      }
+      if (a.type === "interview_proposal") {
+        return {
+          ...base,
+          type: "interview_proposal",
+          recipient: p.recruiterEmail ?? null,
+          slots: p.slots ?? [],
+        };
+      }
+
+      // apply: enrich with cover letter + signed resume URL
       const { data: app } = await supabase
         .from("applications")
         .select("cover_letter, tailored_resume_file_id")
         .eq("id", a.application_id)
         .single();
-
       let resumeUrl: string | null = null;
       if (app?.tailored_resume_file_id) {
         const { data: file } = await supabase
@@ -50,14 +77,11 @@ export default async function InboxPage() {
           resumeUrl = signed?.signedUrl ?? null;
         }
       }
-
       return {
-        id: a.id,
-        jobTitle: payload.jobTitle ?? "Role",
-        company: payload.company ?? "",
-        location: payload.location ?? null,
-        score: payload.score ?? null,
-        applyUrl: payload.applyUrl ?? "",
+        ...base,
+        type: "apply",
+        score: p.score ?? null,
+        applyUrl: p.applyUrl ?? "",
         coverLetter: app?.cover_letter ?? "",
         resumeUrl,
       };
@@ -75,9 +99,15 @@ export default async function InboxPage() {
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-bold">Approval inbox</h1>
         <p className="text-neutral-600">
-          Each card is a ready-to-send application. Approve it and the agent
-          submits; skip it and the agent moves on.
+          Applications, follow-ups, and interview times — approve and the agent
+          acts.
         </p>
+        <a
+          href="/api/integrations/google/start"
+          className="mt-2 w-fit text-sm text-blue-700 underline"
+        >
+          Connect Gmail &amp; Calendar
+        </a>
       </header>
 
       <section className="flex flex-col gap-4">

@@ -8,7 +8,7 @@ Full plan: see the project plan / `README.md`.
 | Phase | Title | Status |
 |---|---|---|
 | 0 | Foundations | ✅ Complete |
-| 1 | Profile & Goal | ⏳ Planned |
+| 1 | Profile & Goal | ✅ Complete |
 | 2 | Discovery & Match | ⏳ Planned |
 | 3 | Tailor & Package | ⏳ Planned |
 | 4 | Review & Apply (first E2E demo) | ⏳ Planned |
@@ -56,3 +56,36 @@ resumes are treated as sensitive PII (encryption + RLS).
 
 **Next:** Phase 1 — resume upload + parse and goal parsing wired into an
 onboarding flow.
+
+---
+
+## Phase 1 — Profile & Goal ✅
+
+**Goal:** A user can sign in, upload a resume (→ structured profile), and state
+a goal (→ structured preferences) that kicks off the durable workflow.
+
+**Delivered:**
+
+- **Auth** — magic-link sign-in (`/login`), code-exchange callback
+  (`/auth/callback`), and a `requireUser()` server guard for protected pages.
+- **Resume extraction** (`src/lib/resume/extract.ts`) — PDF text via `unpdf`,
+  plus plain-text handling, behind one interface.
+- **API routes**
+  - `POST /api/profile/resume` — multipart upload → store original in the
+    private `resumes` bucket → extract text → `parseResume` (Claude) → save
+    `candidate_profiles`.
+  - `POST /api/missions` — create a mission from the goal and emit
+    `mission/created`.
+- **Workflow** (`src/inngest/functions/parse-mission.ts`) — `mission/created`
+  → `parseGoal` (Claude) → save preferences, activate mission, log an activity
+  event, and hand off `mission/discover.requested` (consumed in Phase 2).
+- **Onboarding UI** (`/onboarding`) — two-step flow (resume → goal → run), then
+  redirect to a minimal activity view (`/inbox`, full Approval Inbox in Phase 4).
+- **Storage** (`0003_storage.sql`) — private `resumes` bucket with per-user
+  folder RLS; `candidate_profiles.user_id` made unique (one profile per user).
+
+**Note:** dependencies are not yet installed in this environment, so a local
+`npm run typecheck` / `build` has not been run against Phase 0–1 code.
+
+**Next:** Phase 2 — job-source connectors (Adzuna, Greenhouse/Lever), dedupe,
+and cached scoring.

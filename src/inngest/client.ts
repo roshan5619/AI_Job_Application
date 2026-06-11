@@ -22,6 +22,10 @@ type Events = {
       decision: "approved" | "rejected" | "edited";
     };
   };
+  // Scheduled after an approved application is submitted (Phase 5 follow-up).
+  "application/follow-up.scheduled": {
+    data: { applicationId: string; userId: string };
+  };
   "comms/reply.received": {
     data: { userId: string; gmailThreadId: string; messageId: string };
   };

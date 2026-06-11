@@ -1,4 +1,5 @@
 import type { InngestFunction } from "inngest";
+import { awaitApproval } from "./await-approval";
 import { discover, scheduledDiscovery } from "./discover";
 import { parseMission } from "./parse-mission";
 import { score } from "./score";
@@ -15,4 +16,5 @@ export const functions: InngestFunction.Any[] = [
   scheduledDiscovery,
   score,
   tailor,
+  awaitApproval,
 ];

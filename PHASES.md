@@ -11,7 +11,7 @@ Full plan: see the project plan / `README.md`.
 | 1 | Profile & Goal | ✅ Complete |
 | 2 | Discovery & Match | ✅ Complete |
 | 3 | Tailor & Package | ✅ Complete |
-| 4 | Review & Apply (first E2E demo) | ⏳ Planned |
+| 4 | Review & Apply (first E2E demo) | ✅ Complete |
 | 5 | Follow-up & Inbox | ⏳ Planned |
 | 6 | Interview Scheduling | ⏳ Planned |
 | 7 | Launch Hardening | ⏳ Planned |
@@ -150,3 +150,32 @@ server-side via `serverExternalPackages`).
 
 **Next:** Phase 4 — the Approval Inbox UI, the `waitForEvent` approval gate, and
 assisted submission. First true end-to-end demo.
+
+---
+
+## Phase 4 — Review & Apply ✅ (first end-to-end path)
+
+**Goal:** A human approves prepared applications; on approval the agent submits.
+Nothing leaves the system without an explicit decision.
+
+**Delivered:**
+
+- **Approval gate workflow** (`src/inngest/functions/await-approval.ts`) —
+  `application/ready` → `step.waitForEvent("application/approval.resolved")`
+  (30-day window, matched by `applicationId`). On **approve**: idempotent submit
+  (guards on `submitted_at`), application → `submitted` (assisted), match →
+  `applied`, activity logged, and a follow-up is scheduled. On **reject**:
+  application + match → `rejected`.
+- **Resolve API** (`src/app/api/approvals/[id]/route.ts`) — records the decision
+  (RLS-scoped, double-resolution guarded) and emits the resolve event that
+  un-pauses the workflow.
+- **Approval Inbox** (`src/app/inbox/page.tsx` + `ApprovalCard.tsx`) — pending
+  cards with job, fit score, signed tailored-resume PDF link, job posting link,
+  expandable cover letter, and **Approve & apply / Skip**. Plus the activity feed.
+- **Event** — added `application/follow-up.scheduled` (Phase 5 consumes it).
+
+**This closes the core loop:** mission → discover → score → tailor → **review →
+apply**. Verified: `tsc --noEmit` clean; `next build` succeeds.
+
+**Next:** Phase 5 — Gmail OAuth, scheduled follow-up emails (approval-gated),
+and inbound-reply triage.

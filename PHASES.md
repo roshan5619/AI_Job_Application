@@ -9,7 +9,7 @@ Full plan: see the project plan / `README.md`.
 |---|---|---|
 | 0 | Foundations | ✅ Complete |
 | 1 | Profile & Goal | ✅ Complete |
-| 2 | Discovery & Match | ⏳ Planned |
+| 2 | Discovery & Match | ✅ Complete |
 | 3 | Tailor & Package | ⏳ Planned |
 | 4 | Review & Apply (first E2E demo) | ⏳ Planned |
 | 5 | Follow-up & Inbox | ⏳ Planned |
@@ -89,3 +89,36 @@ a goal (→ structured preferences) that kicks off the durable workflow.
 
 **Next:** Phase 2 — job-source connectors (Adzuna, Greenhouse/Lever), dedupe,
 and cached scoring.
+
+---
+
+## Phase 2 — Discovery & Match ✅
+
+**Goal:** From a mission's preferences, pull real jobs from official APIs,
+dedupe them, and score each against the candidate — cheaply and in parallel.
+
+**Delivered:**
+
+- **Job-source connectors** (`src/lib/jobs/`)
+  - `adzuna.ts` — primary keyword/location search (free-tier API; skipped when
+    unconfigured).
+  - `greenhouse.ts` / `lever.ts` — per-company public board APIs over a curated,
+    extensible slug set, keyword-filtered client-side.
+  - `util.ts` — HTML→text, remote-detection, and a cheap keyword pre-filter.
+  - `index.ts` — `discoverJobs()` runs all sources in parallel
+    (`Promise.allSettled`, so one failure can't sink the run) and dedupes.
+- **Workflows**
+  - `discover.ts` — `mission/discover.requested` → search → upsert shared
+    `job_listings` (dedup via `unique(source, external_id)`) → create new
+    `job_matches` (ignore-duplicates so re-runs don't re-score) → log activity →
+    fan out one `match/score.requested` per new match.
+  - `scheduledDiscovery` — cron every 6h re-runs discovery for active missions.
+  - `score.ts` — `match/score.requested` → `scoreJob` (Claude Haiku, candidate
+    profile cached in the prompt prefix) → save score + rationale; matches
+    ≥ 70 advance to `tailoring` and emit `match/tailor.requested`, the rest are
+    `skipped`. Concurrency-limited to 8.
+
+**Verified:** `tsc --noEmit` clean.
+
+**Next:** Phase 3 — tailor the resume for high-scoring matches, draft a cover
+letter, and render a tailored PDF.

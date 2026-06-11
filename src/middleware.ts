@@ -41,6 +41,9 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // Skip static assets and the Inngest webhook (it authenticates itself).
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|api/inngest).*)"],
+  // Skip static assets and webhooks (they verify their own signatures and must
+  // receive the raw, unmodified request body).
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|api/inngest|api/stripe/webhook).*)",
+  ],
 };

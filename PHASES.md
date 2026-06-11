@@ -14,7 +14,7 @@ Full plan: see the project plan / `README.md`.
 | 4 | Review & Apply (first E2E demo) | ✅ Complete |
 | 5 | Follow-up & Inbox | ✅ Complete (code) |
 | 6 | Interview Scheduling | ✅ Complete (code) |
-| 7 | Launch Hardening | ⏳ Planned |
+| 7 | Launch Hardening | ✅ Complete |
 
 ---
 
@@ -233,3 +233,46 @@ server-side). Live Gmail/Calendar actions require a Google Cloud OAuth app
 
 **Next:** Phase 7 — launch hardening (Stripe billing, per-user quotas,
 observability, security review).
+
+---
+
+## Phase 7 — Launch Hardening ✅
+
+**Goal:** Make the product multi-tenant-safe and monetizable: billing, abuse
+limits, observability, and a documented security model.
+
+**Delivered:**
+
+- **Billing (Stripe)**
+  - `subscriptions` table (one per user) + RLS (`0004_billing.sql`); owner-read,
+    service-role-write (the webhook).
+  - `lib/stripe.ts` client; `lib/billing/plans.ts` (Free vs Pro with quotas).
+  - `/api/billing/checkout` (Checkout session, creates/reuses Stripe customer),
+    `/api/billing/portal` (manage plan), `/api/stripe/webhook` (signature-verified
+    sync of plan/status/period; excluded from auth middleware for raw body).
+- **Quotas** (`lib/billing/quota.ts`) — per-plan caps on active missions and
+  monthly application submissions, enforced server-side at mission-create and
+  application-approve (HTTP 402 + `quota_exceeded` when exceeded).
+- **Observability** — structured JSON logger with secret redaction
+  (`lib/log.ts`); app-wide error boundary (`app/error.tsx`).
+- **Security** — global security headers (`next.config.mjs`: nosniff, frame
+  DENY, HSTS, referrer + permissions policy); `SECURITY.md` documenting RLS,
+  encryption, no-token-logging, human-in-the-loop authorization, webhook
+  verification, and open review items.
+
+**Verified:** `tsc --noEmit` clean; `next build` succeeds (all billing/webhook
+routes present).
+
+---
+
+## Build complete
+
+All seven phases are implemented, type-checked, and build-green. The full
+agent loop — discover → score → tailor → review → apply → follow-up → triage →
+schedule — runs as a durable, human-gated workflow, behind auth, multi-tenant
+RLS, encrypted integrations, quotas, and billing.
+
+**To run live:** populate `.env.local` (Supabase, Anthropic, Adzuna,
+`INTEGRATION_ENCRYPTION_KEY`, Google OAuth app, Stripe), apply
+`supabase/migrations/0001`–`0004`, create the private `resumes` bucket, then
+`npm run dev` + `npm run inngest`.

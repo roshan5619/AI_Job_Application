@@ -37,6 +37,11 @@ export const env = {
   googleClientSecret: () => required("GOOGLE_CLIENT_SECRET"),
   googleOAuthRedirectUri: () => required("GOOGLE_OAUTH_REDIRECT_URI"),
 
+  // Stripe
+  stripeSecretKey: () => required("STRIPE_SECRET_KEY"),
+  stripeWebhookSecret: () => required("STRIPE_WEBHOOK_SECRET"),
+  stripePricePro: () => required("STRIPE_PRICE_PRO"),
+
   // App
   appUrl: () => process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
 };

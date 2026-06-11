@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { inngest } from "@/inngest/client";
+import { checkApplicationQuota } from "@/lib/billing/quota";
 import { getCurrentUser, supabaseServer } from "@/lib/supabase/server";
 
 /**
@@ -27,7 +28,7 @@ export async function POST(
   // Load the approval (RLS-scoped) and guard against double-resolution.
   const { data: approval, error } = await supabase
     .from("approvals")
-    .select("id, application_id, decision")
+    .select("id, application_id, decision, type")
     .eq("id", id)
     .single();
   if (error || !approval) {
@@ -35,6 +36,20 @@ export async function POST(
   }
   if (approval.decision) {
     return NextResponse.json({ ok: true, already: approval.decision });
+  }
+
+  // Enforce the monthly application quota only when approving an apply card.
+  if (decision === "approved" && approval.type === "apply") {
+    const quota = await checkApplicationQuota(user.id);
+    if (!quota.ok) {
+      return NextResponse.json(
+        {
+          error: `Monthly application limit reached (${quota.used}/${quota.limit} on the ${quota.plan} plan). Upgrade to apply to more.`,
+          code: "quota_exceeded",
+        },
+        { status: 402 },
+      );
+    }
   }
 
   const { error: updErr } = await supabase

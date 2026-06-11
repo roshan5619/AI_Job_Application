@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { inngest } from "@/inngest/client";
+import { checkMissionQuota } from "@/lib/billing/quota";
 import { getCurrentUser, supabaseServer } from "@/lib/supabase/server";
 
 /**
@@ -14,6 +15,17 @@ export async function POST(request: NextRequest) {
   const { goal } = await request.json().catch(() => ({ goal: "" }));
   if (!goal || typeof goal !== "string" || goal.trim().length < 5) {
     return NextResponse.json({ error: "goal is required" }, { status: 400 });
+  }
+
+  const quota = await checkMissionQuota(user.id);
+  if (!quota.ok) {
+    return NextResponse.json(
+      {
+        error: `Active mission limit reached (${quota.used}/${quota.limit} on the ${quota.plan} plan). Upgrade or pause a mission.`,
+        code: "quota_exceeded",
+      },
+      { status: 402 },
+    );
   }
 
   const supabase = await supabaseServer();
